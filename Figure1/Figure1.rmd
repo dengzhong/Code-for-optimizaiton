@@ -1,0 +1,64 @@
+---
+title: "Figure 1"
+Autor: "Zhongci Deng"
+---
+
+# Figure 1a
+```{r}
+library(tidyverse)
+library(sf)
+library(camcorder)
+library(MetBrewer)
+library(giscoR)
+library(ggpattern)
+
+
+sessionInfo()
+
+life_df <- read_csv('/Users/zhongcideng/Desktop/MND.csv')
+
+le_change <- reshape2::melt(life_df, id.vars=c("ISO3","Region Code"),variable.name="age_groups",value.name = "intake") %>%
+  filter(age_groups == 'MND')
+
+world <- giscoR::gisco_get_countries() %>%
+  janitor::clean_names() %>%
+  rename(ISO3 = iso3_code) %>%
+  filter(ISO3 != "ATA") %>%
+  #st_transform(crs = "+proj=moll")
+  st_transform(graticules, crs = "+proj=robin +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+
+
+world_le_MND <- world %>% left_join(le_change) %>%
+  filter(!is.na(intake))  %>%
+  mutate(intake = ifelse(intake > 0.25, 0.25, intake))
+
+
+p1 <- ggplot(world_le_MND) +
+  geom_sf(data = world, fill = NA, color = "black", linewidth = 0.1) +
+  geom_sf(aes(fill = intake), linewidth = 0, color = "black") +
+
+  #scale_fill_gradient2(name = "MND", limits = c(0, 0.2), low = "steelblue2", high = "tomato", midpoint = 0.1,na.value = "gray") +
+  scale_fill_gradient2(name = "Mean nutrient deficiency", limits = c(0, 0.25), breaks = c(0,0.25),low = "white", mid = '#474747',high = "black", midpoint = 0.125) +
+
+  #facet_wrap(vars(age_groups), ncol = 2) +
+  guides(fill = guide_colorbar(title.position = "top"))+
+  theme_minimal(base_size = 12,base_family = 'Arial') +
+  theme(
+    legend.position = "bottom",
+    legend.position.inside = c(0, 0),
+    legend.title = element_text(hjust = 0.5),
+    legend.key.width = unit(3, "lines"),
+    legend.key.height = unit(1, "lines"),
+    plot.background = element_rect(fill = "white", color = NA),
+    #panel.background = element_rect(fill = NA),
+    strip.text = element_text(size = 12),
+    axis.text = element_blank(),
+    panel.grid = element_line(linewidth = 0.1, color = "black")
+  )
+
+p1
+
+
+ggsave(p1,file="/Users/zhongcideng/Desktop/optimize/GENuS age data/Figure/Figure1/Figure1a.png",dpi = 1200,units = "mm")
+
+```
